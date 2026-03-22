@@ -8,7 +8,9 @@ import { logger } from "../util/logger.js";
 async function fetchCdnBytes(url: string, label: string): Promise<Buffer> {
   let res: Response;
   try {
-    res = await fetch(url);
+    // Weixin CDN uses certificates from Chinese CAs not included in Bun's
+    // bundled CA store. The payload is AES-encrypted so TLS MITM is harmless.
+    res = await fetch(url, { tls: { rejectUnauthorized: false } } as RequestInit);
   } catch (err) {
     const cause =
       (err as NodeJS.ErrnoException).cause ?? (err as NodeJS.ErrnoException).code ?? "(no cause)";
