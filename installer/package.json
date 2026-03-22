@@ -1,0 +1,10 @@
+{
+  "name": "@fqx/claude-code-weixin-cli",
+  "version": "1.0.0",
+  "description": "Installer CLI for the WeChat channel plugin for Claude Code",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "claude-code-weixin": "./cli.mjs"
+  }
+}
