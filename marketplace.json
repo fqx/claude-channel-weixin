@@ -1,11 +1,20 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "fqx",
   "description": "fqx's Claude Code plugins",
+  "owner": {
+    "name": "fqx"
+  },
   "plugins": [
     {
       "name": "weixin",
       "description": "WeChat channel for Claude Code — messaging bridge over iLink",
-      "source": "https://github.com/fqx/claude-channel-weixin/archive/main.tar.gz"
+      "source": {
+        "source": "url",
+        "url": "https://github.com/fqx/claude-channel-weixin.git",
+        "sha": "c283eef17c6b061d35831c1a58e543c72a1c13d3"
+      },
+      "homepage": "https://github.com/fqx/claude-channel-weixin"
     }
   ]
 }
