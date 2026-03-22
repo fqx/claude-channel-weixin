@@ -11,7 +11,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/fqx/claude-channel-weixin.git",
-        "sha": "f3ccfe24a4eb890dfeebc2cb6f8122c59e9b2b31"
+        "sha": "c064f9f0c58b8547a600acf430ecbd80e0fd7cfd"
       },
       "homepage": "https://github.com/fqx/claude-channel-weixin"
     }
