@@ -59,7 +59,7 @@ export async function downloadMediaFromItem(
             cdnBaseUrl,
             `${label} image-plain`,
           );
-      const saved = await saveMedia(buf, undefined, "inbound", WEIXIN_MEDIA_MAX_BYTES);
+      const saved = await saveMedia(buf, "image/jpeg", "inbound", WEIXIN_MEDIA_MAX_BYTES);
       result.decryptedPicPath = saved.path;
       logger.debug(`${label} image saved: ${saved.path}`);
     } catch (err) {
