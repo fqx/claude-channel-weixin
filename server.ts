@@ -480,22 +480,20 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
           return { content: [{ type: "text", text: "Already connected. Use /weixin:configure to check status." }] };
         }
         if (qrCodeUrl) {
+          let qrAscii = "";
           try {
             const qrterm = await import("qrcode-terminal");
-            await new Promise<void>(resolve => {
-              qrterm.default.generate(qrCodeUrl!, { small: true }, (qr: string) => {
-                process.stderr.write("\n" + qr + "\n");
-                resolve();
-              });
+            qrAscii = await new Promise<string>(resolve => {
+              qrterm.default.generate(qrCodeUrl!, { small: true }, (qr: string) => resolve(qr));
             });
           } catch {
-            process.stderr.write(`\nWeChat QR: ${qrCodeUrl}\n\n`);
+            qrAscii = qrCodeUrl!;
           }
           return {
             content: [
               {
                 type: "text",
-                text: `QR code ready — scan with WeChat (shown in terminal above).\n\nThe server will connect automatically once scanned.`,
+                text: `Scan this QR code with WeChat:\n\n${qrAscii}\nThe server will connect automatically once scanned.`,
               },
             ],
           };
