@@ -9,8 +9,9 @@
       "name": "weixin",
       "description": "WeChat channel for Claude Code — messaging bridge over iLink",
       "source": {
-        "source": "github",
-        "repo": "fqx/claude-channel-weixin"
+        "source": "url",
+        "url": "https://github.com/fqx/claude-channel-weixin.git",
+        "sha": "576b8fedc07c0279b551e1f4273bcf9ef7d1797a"
       },
       "homepage": "https://github.com/fqx/claude-channel-weixin"
     }
