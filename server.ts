@@ -187,7 +187,17 @@ async function startQrLogin(): Promise<void> {
     if (result.qrcodeUrl) {
       qrCodeUrl = result.qrcodeUrl;
       qrSessionKey = result.sessionKey;
-      process.stderr.write(`weixin channel: scan QR to connect WeChat: ${qrCodeUrl}\n`);
+      try {
+        const qrterm = await import("qrcode-terminal");
+        await new Promise<void>(resolve => {
+          qrterm.default.generate(result.qrcodeUrl!, { small: true }, (qr: string) => {
+            process.stderr.write("\nweixin channel: scan this QR code with WeChat:\n\n" + qr + "\n");
+            resolve();
+          });
+        });
+      } catch {
+        process.stderr.write(`weixin channel: scan QR to connect WeChat: ${qrCodeUrl}\n`);
+      }
       // Start polling for login completion in the background
       void pollQrLogin(result.sessionKey);
     } else {
@@ -470,11 +480,22 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
           return { content: [{ type: "text", text: "Already connected. Use /weixin:configure to check status." }] };
         }
         if (qrCodeUrl) {
+          try {
+            const qrterm = await import("qrcode-terminal");
+            await new Promise<void>(resolve => {
+              qrterm.default.generate(qrCodeUrl!, { small: true }, (qr: string) => {
+                process.stderr.write("\n" + qr + "\n");
+                resolve();
+              });
+            });
+          } catch {
+            process.stderr.write(`\nWeChat QR: ${qrCodeUrl}\n\n`);
+          }
           return {
             content: [
               {
                 type: "text",
-                text: `QR code ready — open this URL in a browser and scan with WeChat:\n\n${qrCodeUrl}\n\nThe server will connect automatically once scanned.`,
+                text: `QR code ready — scan with WeChat (shown in terminal above).\n\nThe server will connect automatically once scanned.`,
               },
             ],
           };
