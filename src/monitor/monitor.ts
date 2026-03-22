@@ -122,6 +122,18 @@ export async function monitorWeixinProvider(
 
         const mediaOpts: WeixinInboundMediaOpts = {};
         if (opts.saveMedia) {
+          // Log when an image/video/file item lacks encrypt_query_param (download will be skipped).
+          for (const item of msg.item_list ?? []) {
+            if (
+              (item.type === MessageItemType.IMAGE && !item.image_item?.media?.encrypt_query_param) ||
+              (item.type === MessageItemType.VIDEO && !item.video_item?.media?.encrypt_query_param) ||
+              (item.type === MessageItemType.FILE && !item.file_item?.media?.encrypt_query_param)
+            ) {
+              aLog.warn(
+                `inbound media item type=${item.type} has no encrypt_query_param — download skipped. raw=${JSON.stringify(item).slice(0, 200)}`,
+              );
+            }
+          }
           const mainMediaItem =
             msg.item_list?.find(
               (i) => i.type === MessageItemType.IMAGE && i.image_item?.media?.encrypt_query_param,

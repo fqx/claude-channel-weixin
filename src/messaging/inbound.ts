@@ -102,6 +102,16 @@ function bodyFromItemList(itemList?: MessageItem[]): string {
       return item.voice_item.text;
     }
   }
+  // No text found — describe the media type so the notification is never empty.
+  for (const item of itemList) {
+    if (item.type === MessageItemType.IMAGE) return "(image)";
+    if (item.type === MessageItemType.VIDEO) return "(video)";
+    if (item.type === MessageItemType.FILE) {
+      const name = item.file_item?.file_name;
+      return name ? `(file: ${name})` : "(file)";
+    }
+    if (item.type === MessageItemType.VOICE) return "(voice message)";
+  }
   return "";
 }
 
