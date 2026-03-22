@@ -8,38 +8,35 @@ Based on `@tencent-weixin/openclaw-weixin` (MIT License, Copyright 2026 Tencent 
 
 ## Requirements
 
-- Claude Code >= 2.1.80
+- [Claude Code](https://claude.ai/code) >= 2.1.80
 - [Bun](https://bun.sh) runtime
-- A WeChat account that supports iLink Bot (企业微信 or iLink-enabled personal account)
+- A WeChat account that supports iLink Bot
 
 ---
 
 ## Installation
 
-### Option A: one-liner (recommended)
+**1. Add the marketplace**
 
 ```bash
-npx -y @fqx/claude-code-weixin-cli install
+claude plugins marketplace add https://github.com/fqx/claude-channel-weixin
 ```
 
-This installs the plugin and launches Claude Code for initial QR login.
-
-### Option B: manual
-
-**1. Register the marketplace and install the plugin**
+**2. Install the plugin**
 
 ```bash
-claude plugins marketplace add https://raw.githubusercontent.com/fqx/claude-channel-weixin/main/marketplace.json
 claude plugins install weixin@fqx
 ```
 
-**2. Launch Claude Code with the WeChat channel**
+**3. Launch Claude Code with the WeChat channel**
 
 ```bash
-claude --channels plugin:weixin@fqx
+claude --dangerously-load-development-channels plugin:weixin@fqx
 ```
 
-**3. Log in via QR code**
+> `--dangerously-load-development-channels` is required for plugins from third-party marketplaces. It acknowledges the prompt injection risk that comes with receiving external messages.
+
+**4. Log in via QR code**
 
 Inside Claude Code, run:
 
@@ -47,13 +44,13 @@ Inside Claude Code, run:
 /weixin:configure login
 ```
 
-A QR code will appear in the terminal. Scan it with WeChat. Once scanned, the session token is saved automatically.
+A QR code will appear. Scan it with WeChat. Once scanned, the session token is saved and the channel starts listening for messages.
 
 ---
 
-## Pairing (allow a WeChat user to reach you)
+## Authorize a WeChat user (pairing)
 
-The channel uses a pairing flow to authorize users. By default, any WeChat user who messages your bot gets a 6-character code, which you approve in your terminal.
+By default, the channel is in pairing mode: any WeChat user who messages your bot gets a 6-character code to give you.
 
 **On WeChat:** the user sends any message to the bot. The bot replies with a code, e.g. `a3f9b2`.
 
@@ -63,17 +60,28 @@ The channel uses a pairing flow to authorize users. By default, any WeChat user 
 /weixin:access pair a3f9b2
 ```
 
-The user is added to your allowlist and receives a confirmation message on WeChat.
+The user is added to your allowlist and receives a confirmation on WeChat. Claude will now respond to their messages automatically.
 
-**Manage the allowlist:**
+Once everyone who needs access has been paired, lock it down:
 
 ```
-/weixin:access               # show current status
-/weixin:access allow <id>    # add a user ID directly
-/weixin:access remove <id>   # remove a user
-/weixin:access deny <code>   # reject a pending pairing
-/weixin:access policy allowlist   # lock down (no new pairings)
-/weixin:access policy pairing     # re-open pairing
+/weixin:access policy allowlist
+```
+
+This prevents anyone new from triggering pairing codes.
+
+---
+
+## Access management
+
+```
+/weixin:access                    # show current status
+/weixin:access pair <code>        # approve a pending pairing
+/weixin:access deny <code>        # reject a pending pairing
+/weixin:access allow <openid>     # add a user directly
+/weixin:access remove <openid>    # remove a user
+/weixin:access policy pairing     # open pairing (default)
+/weixin:access policy allowlist   # lock down — allowlist only
 /weixin:access policy disabled    # block all incoming messages
 ```
 
@@ -81,19 +89,17 @@ The user is added to your allowlist and receives a confirmation message on WeCha
 
 ## Day-to-day usage
 
-After initial setup, launch with:
-
 ```bash
-claude --channels plugin:weixin@fqx
+claude --dangerously-load-development-channels plugin:weixin@fqx
 ```
 
-WeChat messages from authorized users will appear as channel notifications in Claude Code. Use the `weixin_reply` tool (called automatically by Claude) to respond.
+WeChat messages from authorized users arrive as channel notifications. Claude responds automatically and uses `weixin_reply` to send the reply back via WeChat.
 
 ---
 
 ## Re-login
 
-WeChat iLink sessions can expire. When that happens the channel clears the token and re-enters QR mode automatically. You'll see a notice in the terminal. Re-login with:
+WeChat iLink sessions can expire. When that happens, the channel clears the token and notifies you. Re-login with:
 
 ```
 /weixin:configure login
@@ -113,12 +119,12 @@ All state is stored in `~/.claude/channels/weixin/`:
 
 | File | Contents |
 |------|----------|
-| `.env` | `WEIXIN_TOKEN=<iLink session token>` (chmod 600) |
+| `.env` | `WEIXIN_TOKEN=<iLink session token>` (mode 600) |
 | `access.json` | DM policy, allowlist, pending pairings |
-| `approved/<openid>` | Signals the server to send a pairing confirmation |
+| `approved/<openid>` | Written by `/weixin:access pair` to trigger confirmation |
 | `accounts/` | Per-account credential files |
 
-Override the state directory with `WEIXIN_STATE_DIR=/custom/path`.
+Override the state directory: `WEIXIN_STATE_DIR=/custom/path`.
 
 ---
 
