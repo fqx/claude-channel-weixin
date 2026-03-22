@@ -1,0 +1,18 @@
+{
+  "name": "fqx",
+  "description": "fqx's Claude Code plugins",
+  "owner": {
+    "name": "fqx"
+  },
+  "plugins": [
+    {
+      "name": "weixin",
+      "description": "WeChat channel for Claude Code — messaging bridge over iLink",
+      "source": {
+        "source": "github",
+        "repo": "fqx/claude-channel-weixin"
+      },
+      "homepage": "https://github.com/fqx/claude-channel-weixin"
+    }
+  ]
+}
