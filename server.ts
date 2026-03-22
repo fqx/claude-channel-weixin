@@ -25,8 +25,8 @@ import {
   renameSync,
   chmodSync,
 } from "fs";
-import { homedir } from "os";
-import { join } from "path";
+import { homedir, tmpdir } from "os";
+import { join, extname } from "path";
 
 import { startWeixinLoginWithQr, waitForWeixinLogin } from "./src/auth/login-qr.js";
 import { saveWeixinAccount, DEFAULT_BASE_URL, CDN_BASE_URL } from "./src/auth/accounts.js";
@@ -246,6 +246,34 @@ async function pollQrLogin(sessionKey: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Media save helper (writes inbound media to a temp dir for Claude to read)
+// ---------------------------------------------------------------------------
+
+const MEDIA_TMP_DIR = join(tmpdir(), "weixin-inbound-media");
+
+async function saveMedia(
+  buffer: Buffer,
+  contentType?: string,
+  _subdir?: string,
+  maxBytes?: number,
+  originalFilename?: string,
+): Promise<{ path: string }> {
+  if (maxBytes && buffer.length > maxBytes) {
+    throw new Error(`media too large: ${buffer.length} > ${maxBytes}`);
+  }
+  mkdirSync(MEDIA_TMP_DIR, { recursive: true });
+  let ext = originalFilename ? extname(originalFilename) : "";
+  if (!ext && contentType) {
+    const sub = contentType.split("/")[1];
+    if (sub) ext = `.${sub.split(";")[0].trim()}`;
+  }
+  if (!ext) ext = ".bin";
+  const filePath = join(MEDIA_TMP_DIR, `${randomBytes(8).toString("hex")}${ext}`);
+  writeFileSync(filePath, buffer);
+  return { path: filePath };
+}
+
+// ---------------------------------------------------------------------------
 // Monitor loop
 // ---------------------------------------------------------------------------
 
@@ -262,6 +290,7 @@ async function startMonitor(token: string, baseUrl: string): Promise<void> {
       token,
       accountId: ACCOUNT_ID,
       abortSignal: abortController.signal,
+      saveMedia,
     },
     handleInbound,
   );

@@ -1,8 +1,10 @@
 import { getUpdates } from "../api/api.js";
 import { WeixinConfigManager } from "../api/config-cache.js";
 import { SESSION_EXPIRED_ERRCODE, pauseSession, getRemainingPauseMs } from "../api/session-guard.js";
-import { weixinMessageToMsgContext, setContextToken } from "../messaging/inbound.js";
-import type { WeixinMsgContext } from "../messaging/inbound.js";
+import { weixinMessageToMsgContext, setContextToken, isMediaItem } from "../messaging/inbound.js";
+import type { WeixinMsgContext, WeixinInboundMediaOpts } from "../messaging/inbound.js";
+import { downloadMediaFromItem } from "../media/media-download.js";
+import { MessageItemType } from "../api/types.js";
 import { getSyncBufFilePath, loadGetUpdatesBuf, saveGetUpdatesBuf } from "../storage/sync-buf.js";
 import { logger } from "../util/logger.js";
 import type { Logger } from "../util/logger.js";
@@ -13,6 +15,14 @@ const MAX_CONSECUTIVE_FAILURES = 3;
 const BACKOFF_DELAY_MS = 30_000;
 const RETRY_DELAY_MS = 2_000;
 
+type SaveMediaFn = (
+  buffer: Buffer,
+  contentType?: string,
+  subdir?: string,
+  maxBytes?: number,
+  originalFilename?: string,
+) => Promise<{ path: string }>;
+
 export type MonitorWeixinOpts = {
   baseUrl: string;
   cdnBaseUrl: string;
@@ -20,6 +30,7 @@ export type MonitorWeixinOpts = {
   accountId: string;
   abortSignal?: AbortSignal;
   longPollTimeoutMs?: number;
+  saveMedia?: SaveMediaFn;
 };
 
 /**
@@ -109,7 +120,46 @@ export async function monitorWeixinProvider(
         // Fetch per-user config (typingTicket) in the background — don't block delivery.
         void configManager.getForUser(msg.from_user_id ?? "", msg.context_token);
 
-        const ctx = weixinMessageToMsgContext(msg, accountId);
+        const mediaOpts: WeixinInboundMediaOpts = {};
+        if (opts.saveMedia) {
+          const mainMediaItem =
+            msg.item_list?.find(
+              (i) => i.type === MessageItemType.IMAGE && i.image_item?.media?.encrypt_query_param,
+            ) ??
+            msg.item_list?.find(
+              (i) => i.type === MessageItemType.VIDEO && i.video_item?.media?.encrypt_query_param,
+            ) ??
+            msg.item_list?.find(
+              (i) => i.type === MessageItemType.FILE && i.file_item?.media?.encrypt_query_param,
+            ) ??
+            msg.item_list?.find(
+              (i) =>
+                i.type === MessageItemType.VOICE &&
+                i.voice_item?.media?.encrypt_query_param &&
+                !i.voice_item.text,
+            );
+          const refMediaItem = !mainMediaItem
+            ? msg.item_list?.find(
+                (i) =>
+                  i.type === MessageItemType.TEXT &&
+                  i.ref_msg?.message_item &&
+                  isMediaItem(i.ref_msg.message_item!),
+              )?.ref_msg?.message_item
+            : undefined;
+          const mediaItem = mainMediaItem ?? refMediaItem;
+          if (mediaItem) {
+            const downloaded = await downloadMediaFromItem(mediaItem, {
+              cdnBaseUrl,
+              saveMedia: opts.saveMedia,
+              log: (m) => aLog.info(m),
+              errLog: (m) => aLog.error(m),
+              label: "inbound",
+            });
+            Object.assign(mediaOpts, downloaded);
+          }
+        }
+
+        const ctx = weixinMessageToMsgContext(msg, accountId, mediaOpts);
         notify(ctx);
       }
     } catch (err) {
